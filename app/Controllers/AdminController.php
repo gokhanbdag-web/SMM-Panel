@@ -42,7 +42,17 @@ final class AdminController
     }elseif($action==='order_status'){
      $id=(int)($_POST['id']??0);$status=(string)($_POST['status']??'');$allowed=['manual_review','queued','processing','completed','partial','canceled','failed'];
      if($id<1||!in_array($status,$allowed,true))throw new \RuntimeException('Geçersiz sipariş durumu.');
-     $db->prepare('UPDATE orders SET status=?,updated_at=NOW() WHERE id=?')->execute([$status,$id]);$message='Sipariş durumu güncellendi.';
+     $db->beginTransaction();
+     $q=$db->prepare('SELECT id,user_id,charge,status,provider_order_id,refunded_at FROM orders WHERE id=? FOR UPDATE');$q->execute([$id]);$order=$q->fetch();
+     if(!$order)throw new \\RuntimeException('Sipariş bulunamadı.');
+     if(in_array($status,['canceled','failed'],true)&&!empty($order['provider_order_id']))throw new \\RuntimeException('Sağlayıcıya iletilmiş sipariş, sağlayıcı iptal onayı olmadan panelden iade edilemez.');
+     $db->prepare('UPDATE orders SET status=?,updated_at=NOW() WHERE id=?')->execute([$status,$id]);
+     if(in_array($status,['canceled','failed'],true)&&empty($order['refunded_at'])){
+      $db->prepare('UPDATE users SET balance=balance+? WHERE id=?')->execute([$order['charge'],$order['user_id']]);
+      $db->prepare("INSERT INTO transactions(user_id,amount,type,description,created_at) VALUES(?,?,'credit',?,NOW())")->execute([$order['user_id'],$order['charge'],'Yönetici sipariş iadesi #'.$id]);
+      $db->prepare('UPDATE orders SET refunded_at=NOW(),error_message=? WHERE id=?')->execute(['Yönetici tarafından bakiye iade edildi.',$id]);
+     }
+     $db->commit();$message='Sipariş durumu güncellendi.';
     }elseif($action==='settings'){
      foreach(['site_name','bank_name','bank_iban','bank_account_name'] as $key){$value=trim((string)($_POST[$key]??''));$db->prepare('INSERT INTO settings(setting_key,setting_value,updated_at) VALUES(?,?,NOW()) ON DUPLICATE KEY UPDATE setting_value=VALUES(setting_value),updated_at=NOW()')->execute([$key,$value]);}$message='Genel ve banka ayarları kaydedildi.';
     }else{throw new \RuntimeException('Bilinmeyen yönetim işlemi.');}
