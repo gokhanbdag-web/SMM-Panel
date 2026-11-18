@@ -1,0 +1,1 @@
+<h1>Siparişlerim</h1><section class="card"><?php foreach($orders as $o):?><p>#<?=$o['id']?> · <?=e($o['service'])?> · <?=$o['quantity']?> · <?=money($o['charge'])?> · <?=e($o['status'])?> · <?=e($o['created_at'])?></p><?php endforeach?></section>

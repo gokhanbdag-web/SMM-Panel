@@ -1,5 +1,9 @@
 Options -Indexes
 DirectoryIndex index.php
-<FilesMatch "^(config\.php|deploy-config\.php|schema\.sql)$">
-  Require all denied
+<FilesMatch "^(config\.php|install\.lock|deploy-config\.php)$">
+ Require all denied
 </FilesMatch>
+<IfModule mod_rewrite.c>
+ RewriteEngine On
+ RewriteRule ^(app|database)/ - [F,L]
+</IfModule>
