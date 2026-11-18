@@ -21,6 +21,7 @@ final class Schema
   self::column($db,'orders','last_check_at','DATETIME NULL');
   self::column($db,'orders','updated_at','DATETIME NULL');
   self::column($db,'orders','error_message','VARCHAR(500) NULL');
+  self::column($db,'orders','refunded_at','DATETIME NULL');
   $db->prepare("INSERT IGNORE INTO settings(setting_key,setting_value,updated_at) VALUES('bank_name','',NOW()),('bank_iban','',NOW()),('bank_account_name','',NOW()),('site_name','SMM Panel',NOW()),('currency','TRY',NOW())")->execute();
   $db->prepare("INSERT IGNORE INTO schema_migrations(version,applied_at) VALUES('2026_11_smm_core',NOW())")->execute();
  }
