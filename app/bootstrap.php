@@ -8,3 +8,4 @@ spl_autoload_register(function($c){$p='App\\';if(str_starts_with($c,$p)){ $f=APP
 if(session_status()!==PHP_SESSION_ACTIVE){session_name('smm_session');session_set_cookie_params(['httponly'=>true,'secure'=>!empty($_SERVER['HTTPS']),'samesite'=>'Lax']);session_start();}
 date_default_timezone_set('Europe/Istanbul');
 App\Core\Database::connect($config['db']);
+App\Core\Schema::migrate();
