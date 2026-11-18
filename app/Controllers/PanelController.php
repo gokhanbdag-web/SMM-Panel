@@ -200,7 +200,7 @@ final class PanelController
 
         if ($r === 'admin') {
             Auth::admin();
-            (new \\App\\Controllers\\AdminController())->dispatch($method);
+            (new \App\Controllers\AdminController())->dispatch($method);
             return;
         }
 
