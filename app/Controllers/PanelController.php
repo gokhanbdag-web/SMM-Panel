@@ -129,13 +129,14 @@ final class PanelController
                     }
 
                     $p->prepare('UPDATE users SET balance=balance-? WHERE id=?')->execute([$charge, $uid]);
-                    $p->prepare("INSERT INTO orders(user_id,service_id,link,quantity,charge,status,created_at) VALUES(?,?,?,?,?,'pending',NOW())")
-                        ->execute([$uid, $service['id'], $link, $quantity, $charge]);
+                    $initialStatus = !empty($service['provider_id']) && !empty($service['provider_service_id']) ? 'queued' : 'manual_review';
+                    $p->prepare("INSERT INTO orders(user_id,service_id,link,quantity,charge,status,provider_id,created_at) VALUES(?,?,?,?,?,?,?,NOW())")
+                        ->execute([$uid, $service['id'], $link, $quantity, $charge, $initialStatus, $service['provider_id'] ?: null]);
                     $p->prepare("INSERT INTO transactions(user_id,amount,type,description,created_at) VALUES(?,?,'debit','Sipariş oluşturuldu',NOW())")
                         ->execute([$uid, -$charge]);
                     $p->commit();
 
-                    $_SESSION['flash'] = 'Sipariş oluşturuldu.';
+                    $_SESSION['flash'] = $initialStatus === 'queued' ? 'Siparişiniz kuyruğa alındı ve sağlayıcıya iletilecek.' : 'Siparişiniz alındı; yönetici tarafından işleme alınacak.';
                     go('orders');
                 } catch (\RuntimeException $e) {
                     if ($p->inTransaction()) {
@@ -195,45 +196,7 @@ final class PanelController
 
         if ($r === 'admin') {
             Auth::admin();
-            if ($method === 'POST') {
-                $id = filter_var($_POST['id'] ?? null, FILTER_VALIDATE_INT);
-                $action = (string) ($_POST['action'] ?? '');
-                if (!$id || !in_array($action, ['approve', 'reject'], true)) {
-                    http_response_code(400);
-                    exit('Geçersiz yönetim işlemi.');
-                }
-
-                try {
-                    $p->beginTransaction();
-                    $stmt = $p->prepare("SELECT * FROM topups WHERE id=? AND status='pending' FOR UPDATE");
-                    $stmt->execute([$id]);
-                    $topup = $stmt->fetch();
-
-                    if ($topup) {
-                        $newStatus = $action === 'approve' ? 'approved' : 'rejected';
-                        $p->prepare('UPDATE topups SET status=? WHERE id=?')->execute([$newStatus, $id]);
-                        if ($action === 'approve') {
-                            $p->prepare('UPDATE users SET balance=balance+? WHERE id=?')->execute([$topup['amount'], $topup['user_id']]);
-                            $p->prepare("INSERT INTO transactions(user_id,amount,type,description,created_at) VALUES(?,?,'credit','Banka yüklemesi',NOW())")
-                                ->execute([$topup['user_id'], $topup['amount']]);
-                        }
-                    }
-                    $p->commit();
-                    $_SESSION['flash'] = $topup ? 'Bakiye bildirimi işlendi.' : 'Bildirim daha önce işlenmiş veya bulunamadı.';
-                    go('admin');
-                } catch (\Throwable $e) {
-                    if ($p->inTransaction()) {
-                        $p->rollBack();
-                    }
-                    error_log((string) $e);
-                    http_response_code(500);
-                    exit('Bakiye bildirimi işlenemedi.');
-                }
-            }
-
-            $topups = $p->query("SELECT t.*,u.email FROM topups t JOIN users u ON u.id=t.user_id WHERE t.status='pending' ORDER BY t.id ASC")->fetchAll();
-            $orders = $p->query('SELECT o.*,u.email,s.name service FROM orders o JOIN users u ON u.id=o.user_id JOIN services s ON s.id=o.service_id ORDER BY o.id DESC LIMIT 40')->fetchAll();
-            $this->view('Yönetim', $this->page('admin', ['topups' => $topups, 'orders' => $orders]));
+            (new \\App\\Controllers\\AdminController())->dispatch($method);
             return;
         }
 
