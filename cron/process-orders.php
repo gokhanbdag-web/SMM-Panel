@@ -27,11 +27,11 @@ foreach($rows as $o){
   $next=$map[$status]??'processing';
   $db->prepare('UPDATE orders SET status=?,start_count=?,remains=?,last_check_at=NOW(),updated_at=NOW() WHERE id=?')->execute([$next,(string)($result['start_count']??$o['start_count']),(string)($result['remains']??$o['remains']),$o['id']]);
   if(in_array($next,['canceled','failed'],true)){
-   $db->beginTransaction();$q=$db->prepare('SELECT status,charge,user_id FROM orders WHERE id=? FOR UPDATE');$q->execute([$o['id']]);$fresh=$q->fetch();
-   if($fresh&&in_array($fresh['status'],['canceled','failed'],true)&&$fresh['status']===$next&&empty($o['error_message'])){
+   $db->beginTransaction();$q=$db->prepare('SELECT status,charge,user_id,refunded_at FROM orders WHERE id=? FOR UPDATE');$q->execute([$o['id']]);$fresh=$q->fetch();
+   if($fresh&&in_array($fresh['status'],['canceled','failed'],true)&&$fresh['status']===$next&&empty($fresh['refunded_at'])){
     $db->prepare('UPDATE users SET balance=balance+? WHERE id=?')->execute([$fresh['charge'],$fresh['user_id']]);
     $db->prepare("INSERT INTO transactions(user_id,amount,type,description,created_at) VALUES(?,?,'credit',?,NOW())")->execute([$fresh['user_id'],$fresh['charge'],'Başarısız sipariş iadesi #'.$o['id']]);
-    $db->prepare('UPDATE orders SET error_message=? WHERE id=?')->execute(['Bakiye iade edildi.',$o['id']]);
+    $db->prepare('UPDATE orders SET error_message=?,refunded_at=NOW() WHERE id=?')->execute(['Bakiye iade edildi.',$o['id']]);
    }
    $db->commit();
   }
