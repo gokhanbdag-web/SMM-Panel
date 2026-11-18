@@ -3,3 +3,5 @@
 .nav-logout{display:inline;margin:0;padding:0}
 .nav-link{background:transparent;color:#53627b;border:0;padding:0;margin:0;font:inherit;font-weight:600;cursor:pointer}
 .nav-link:hover{color:var(--blue)}
+
+select{width:100%;padding:12px;border:1px solid #d9e1ed;border-radius:10px;background:#fff;font:inherit;color:var(--ink)}details{margin:10px 0}summary{cursor:pointer;color:var(--blue);font-weight:650}button:disabled{opacity:.45;cursor:not-allowed}.line small{display:block;margin:5px 0;color:var(--muted)}.line form{margin-top:8px}.line select{max-width:260px}
