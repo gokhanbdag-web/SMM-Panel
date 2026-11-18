@@ -24,3 +24,5 @@ jobs:
           find . -type f -name '*.php' -not -path './.git/*' -print0 | while IFS= read -r -d '' file; do
             php -l "$file"
           done
+      - name: Test SQL statement splitter
+        run: php tests/sql-splitter.php
