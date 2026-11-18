@@ -5,5 +5,5 @@ DirectoryIndex index.php
 </FilesMatch>
 <IfModule mod_rewrite.c>
  RewriteEngine On
- RewriteRule ^(app|database)/ - [F,L]
+ RewriteRule ^(app|database|cron|tests)/ - [F,L]
 </IfModule>
