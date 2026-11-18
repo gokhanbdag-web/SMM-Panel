@@ -190,7 +190,11 @@ final class PanelController
 
             $stmt = $p->prepare('SELECT * FROM topups WHERE user_id=? ORDER BY id DESC');
             $stmt->execute([$uid]);
-            $this->view('Bakiye yükle', $this->page('topup', ['rows' => $stmt->fetchAll(), 'error' => $error]));
+            $settings = [];
+            foreach ($p->query("SELECT setting_key,setting_value FROM settings WHERE setting_key IN ('bank_name','bank_iban','bank_account_name')")->fetchAll() as $setting) {
+                $settings[$setting['setting_key']] = $setting['setting_value'];
+            }
+            $this->view('Bakiye yükle', $this->page('topup', ['rows' => $stmt->fetchAll(), 'error' => $error, 'settings' => $settings]));
             return;
         }
 
