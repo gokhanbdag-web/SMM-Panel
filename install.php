@@ -10,63 +10,7 @@ session_start();
 $_SESSION['ict'] ??= bin2hex(random_bytes(32));
 $err = '';
 
-/**
- * Split SQL only at semicolons outside quoted strings and identifiers.
- * This prevents semicolons in demo descriptions from breaking INSERT statements.
- */
-function splitSqlStatements(string $sql): array
-{
-    $statements = [];
-    $buffer = '';
-    $quote = null;
-    $length = strlen($sql);
-
-    for ($i = 0; $i < $length; $i++) {
-        $char = $sql[$i];
-
-        if ($quote !== null) {
-            $buffer .= $char;
-
-            if ($char === '\\' && $i + 1 < $length) {
-                $buffer .= $sql[++$i];
-                continue;
-            }
-
-            if ($char === $quote) {
-                if ($i + 1 < $length && $sql[$i + 1] === $quote) {
-                    $buffer .= $sql[++$i];
-                } else {
-                    $quote = null;
-                }
-            }
-            continue;
-        }
-
-        if ($char === "'" || $char === '"' || $char === '`') {
-            $quote = $char;
-            $buffer .= $char;
-            continue;
-        }
-
-        if ($char === ';') {
-            $statement = trim($buffer);
-            if ($statement !== '') {
-                $statements[] = $statement;
-            }
-            $buffer = '';
-            continue;
-        }
-
-        $buffer .= $char;
-    }
-
-    $statement = trim($buffer);
-    if ($statement !== '') {
-        $statements[] = $statement;
-    }
-
-    return $statements;
-}
+require_once __DIR__ . '/app/Core/SqlStatementSplitter.php';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     try {
@@ -98,7 +42,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             throw new RuntimeException('Veritabanı şema dosyası okunamadı.');
         }
 
-        foreach (splitSqlStatements($sql) as $query) {
+        foreach (\App\Core\SqlStatementSplitter::split($sql) as $query) {
             $db->exec($query);
         }
 
