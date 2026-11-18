@@ -1,1 +1,35 @@
-<!doctype html><html lang="tr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title><?=e($title)?> · SMM Panel</title><link rel="stylesheet" href="assets/app.css"></head><body><header><a class="logo" href="index.php">SMM<span>Panel</span></a><nav><?php if($user):?><a href="index.php">Panel</a><a href="index.php?r=services">Hizmetler</a><a href="index.php?r=orders">Siparişler</a><a href="index.php?r=topup">Bakiye</a><?php if($user['role']==='admin'):?><a href="index.php?r=admin">Yönetim</a><?php endif?><a href="index.php?r=logout">Çıkış</a><?php else:?><a href="index.php?r=login">Giriş</a><a href="index.php?r=register">Kayıt</a><?php endif?></nav></header><main><?php if($flash):?><div class="flash"><?=e($flash)?></div><?php endif?><?=$content?></main><footer>SMM Panel · <?=date('Y')?></footer></body></html>
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title><?=e($title)?> · SMM Panel</title>
+<link rel="stylesheet" href="assets/app.css">
+</head>
+<body>
+<header>
+    <a class="logo" href="index.php">SMM<span>Panel</span></a>
+    <nav>
+        <?php if ($user): ?>
+            <a href="index.php">Panel</a>
+            <a href="index.php?r=services">Hizmetler</a>
+            <a href="index.php?r=orders">Siparişler</a>
+            <a href="index.php?r=topup">Bakiye</a>
+            <?php if ($user['role'] === 'admin'): ?><a href="index.php?r=admin">Yönetim</a><?php endif ?>
+            <form method="post" action="index.php?r=logout" class="nav-logout">
+                <input type="hidden" name="_csrf" value="<?=e($token)?>">
+                <button type="submit" class="nav-link">Çıkış</button>
+            </form>
+        <?php else: ?>
+            <a href="index.php?r=login">Giriş</a>
+            <a href="index.php?r=register">Kayıt</a>
+        <?php endif ?>
+    </nav>
+</header>
+<main>
+    <?php if ($flash): ?><div class="flash"><?=e($flash)?></div><?php endif ?>
+    <?=$content?>
+</main>
+<footer>SMM Panel · <?=date('Y')?></footer>
+</body>
+</html>
