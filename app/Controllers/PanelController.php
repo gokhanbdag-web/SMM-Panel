@@ -167,6 +167,10 @@ final class PanelController
         if ($r === 'topup') {
             $error = '';
             if ($method === 'POST') {
+                $bankIban = (string) ($p->query("SELECT setting_value FROM settings WHERE setting_key='bank_iban'")->fetchColumn() ?: '');
+                if ($bankIban === '') {
+                    $error = 'Banka hesap bilgileri henüz tanımlanmadığı için bakiye bildirimi alınamıyor.';
+                }
                 $amountRaw = trim((string) ($_POST['amount'] ?? ''));
                 if (!preg_match('/^\d{1,6}(?:\.\d{1,2})?$/', $amountRaw)) {
                     $error = 'Geçerli bir tutar girin.';
