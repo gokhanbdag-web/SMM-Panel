@@ -3,7 +3,7 @@ declare(strict_types=1);
 if(PHP_SAPI!=='cli'){http_response_code(403);exit("CLI only\n");}
 require dirname(__DIR__).'/app/bootstrap.php';
 use App\Core\{Database,ProviderClient};
-$db=\\App\\Core\\Database::pdo();
+$db=\App\Core\Database::pdo();
 $lock=fopen(sys_get_temp_dir().'/smm-panel-orders.lock','c');
 if(!$lock||!flock($lock,LOCK_EX|LOCK_NB)){exit("worker already running\n");}
 function logProvider(PDO $db,?int $provider,?int $order,string $level,string $message):void{$s=$db->prepare('INSERT INTO provider_logs(provider_id,order_id,level,message,created_at) VALUES(?,?,?,?,NOW())');$s->execute([$provider,$order,$level,mb_substr($message,0,1000)]);}
@@ -14,7 +14,7 @@ foreach($rows as $o){
   if($o['status']==='queued'){
    if(empty($o['provider_id'])||empty($o['provider_service_id'])){continue;}
    $q=$db->prepare("SELECT * FROM providers WHERE id=? AND status='active'");$q->execute([$o['provider_id']]);$provider=$q->fetch();if(!$provider)continue;
-   $client=new \\App\\Core\\ProviderClient($provider);$result=$client->add((string)$o['provider_service_id'],(string)$o['link'],(int)$o['quantity']);
+   $client=new \App\Core\ProviderClient($provider);$result=$client->add((string)$o['provider_service_id'],(string)$o['link'],(int)$o['quantity']);
    if(empty($result['order']))throw new RuntimeException('Sağlayıcı yanıtında sipariş numarası yok.');
    $db->prepare("UPDATE orders SET provider_order_id=?,status='processing',updated_at=NOW(),error_message=NULL WHERE id=? AND status='queued'")->execute([(string)$result['order'],$o['id']]);
    logProvider($db,(int)$provider['id'],(int)$o['id'],'info','Sipariş sağlayıcıya iletildi.');$sent++;continue;
