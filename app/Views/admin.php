@@ -1,1 +1,22 @@
-<h1>Yönetim paneli</h1><section class="card"><h2>Bekleyen EFT bildirimleri</h2><?php foreach($topups as $t):?><form method="post" class="line"><input type="hidden" name="_csrf" value="<?=e($_SESSION['_csrf']??=bin2hex(random_bytes(32)))?>"><input type="hidden" name="id" value="<?=$t['id']?>"><?=e($t['email'])?> · <?=money($t['amount'])?> · <?=e($t['note'])?><button name="action" value="approve">Onayla</button><button class="danger" name="action" value="reject">Reddet</button></form><?php endforeach?></section><section class="card"><h2>Son siparişler</h2><?php foreach($orders as $o):?><p>#<?=$o['id']?> · <?=e($o['email'])?> · <?=e($o['service'])?> · <?=e($o['status'])?></p><?php endforeach?></section>
+<?php if (!empty($error)): ?><p class="error"><?=e($error)?></p><?php endif ?>
+<h1>Yönetim paneli</h1>
+<section class="card">
+    <h2>Bekleyen EFT bildirimleri</h2>
+    <?php if (!$topups): ?><p>Bekleyen bakiye bildirimi bulunmuyor.</p><?php endif ?>
+    <?php foreach ($topups as $t): ?>
+        <form method="post" class="line">
+            <input type="hidden" name="_csrf" value="<?=e($_SESSION['_csrf']??=bin2hex(random_bytes(32)))?>">
+            <input type="hidden" name="id" value="<?=$t['id']?>">
+            <?=e($t['email'])?> · <?=money($t['amount'])?> · <?=e($t['note'])?>
+            <button name="action" value="approve">Onayla</button>
+            <button class="danger" name="action" value="reject">Reddet</button>
+        </form>
+    <?php endforeach ?>
+</section>
+<section class="card">
+    <h2>Son siparişler</h2>
+    <?php if (!$orders): ?><p>Henüz sipariş bulunmuyor.</p><?php endif ?>
+    <?php foreach ($orders as $o): ?>
+        <p>#<?=$o['id']?> · <?=e($o['email'])?> · <?=e($o['service'])?> · <?=e($o['status'])?></p>
+    <?php endforeach ?>
+</section>
