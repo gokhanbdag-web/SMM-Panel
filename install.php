@@ -1,4 +1,158 @@
 <?php
-declare(strict_types=1);if(is_file(__DIR__.'/config.php')){http_response_code(403);exit('Kurulum tamamlandı.');}session_start();$_SESSION['ict']??=bin2hex(random_bytes(32));$err='';
-if($_SERVER['REQUEST_METHOD']==='POST'){try{if(!hash_equals($_SESSION['ict'],$_POST['_csrf']??''))throw new RuntimeException('CSRF hatası');$h=trim($_POST['host']??'localhost');$n=trim($_POST['name']??'');$u=trim($_POST['user']??'');$pw=$_POST['pass']??'';$an=trim($_POST['admin']??'');$em=filter_var($_POST['email']??'',FILTER_VALIDATE_EMAIL);$ap=$_POST['apass']??'';if(!$n||!$u||!$an||!$em||strlen($ap)<10)throw new RuntimeException('Tüm alanları doldurun; yönetici şifresi en az 10 karakter olmalı.');$db=new PDO("mysql:host=$h;dbname=$n;charset=utf8mb4",$u,$pw,[PDO::ATTR_ERRMODE=>PDO::ERRMODE_EXCEPTION]);$sql=file_get_contents(__DIR__.'/database/schema.sql');foreach(array_filter(array_map('trim',explode(';',$sql))) as $q)$db->exec($q);$db->prepare("INSERT INTO users(name,email,password_hash,role,status,balance,created_at) VALUES(?,?,?,'admin','active',0,NOW())")->execute([$an,$em,password_hash($ap,PASSWORD_DEFAULT)]);$cfg="<?php\nreturn ".var_export(['db'=>['host'=>$h,'name'=>$n,'user'=>$u,'pass'=>$pw]],true).";\n";if(file_put_contents(__DIR__.'/config.php',$cfg,LOCK_EX)===false)throw new RuntimeException('config.php yazılamadı; dosya izinlerini kontrol edin.');@chmod(__DIR__.'/config.php',0600);file_put_contents(__DIR__.'/install.lock','ok');header('Location: index.php');exit;}catch(Throwable $e){$err=$e->getMessage();}}
-?><!doctype html><html lang="tr"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>SMM Panel Kurulum</title><link rel="stylesheet" href="assets/app.css"><main><section class="card auth"><h1>SMM Panel Kurulumu</h1><?php if($err):?><p class="error"><?=htmlspecialchars($err,ENT_QUOTES,'UTF-8')?></p><?php endif?><form method="post"><input type="hidden" name="_csrf" value="<?=htmlspecialchars($_SESSION['ict'],ENT_QUOTES,'UTF-8')?>"><label>MySQL sunucusu</label><input name="host" value="localhost" required><label>Veritabanı</label><input name="name" required><label>Veritabanı kullanıcısı</label><input name="user" required><label>Veritabanı şifresi</label><input type="password" name="pass"><h2>Yönetici</h2><label>Ad soyad</label><input name="admin" required><label>E-posta</label><input type="email" name="email" required><label>Şifre (10+ karakter)</label><input type="password" name="apass" minlength="10" required><button>Kurulumu tamamla</button></form></section></main></html>
+declare(strict_types=1);
+
+if (is_file(__DIR__ . '/config.php')) {
+    http_response_code(403);
+    exit('Kurulum tamamlandı.');
+}
+
+session_start();
+$_SESSION['ict'] ??= bin2hex(random_bytes(32));
+$err = '';
+
+/**
+ * Split SQL only at semicolons outside quoted strings and identifiers.
+ * This prevents semicolons in demo descriptions from breaking INSERT statements.
+ */
+function splitSqlStatements(string $sql): array
+{
+    $statements = [];
+    $buffer = '';
+    $quote = null;
+    $length = strlen($sql);
+
+    for ($i = 0; $i < $length; $i++) {
+        $char = $sql[$i];
+
+        if ($quote !== null) {
+            $buffer .= $char;
+
+            if ($char === '\\\\' && $i + 1 < $length) {
+                $buffer .= $sql[++$i];
+                continue;
+            }
+
+            if ($char === $quote) {
+                if ($i + 1 < $length && $sql[$i + 1] === $quote) {
+                    $buffer .= $sql[++$i];
+                } else {
+                    $quote = null;
+                }
+            }
+            continue;
+        }
+
+        if ($char === "'" || $char === '"' || $char === '`') {
+            $quote = $char;
+            $buffer .= $char;
+            continue;
+        }
+
+        if ($char === ';') {
+            $statement = trim($buffer);
+            if ($statement !== '') {
+                $statements[] = $statement;
+            }
+            $buffer = '';
+            continue;
+        }
+
+        $buffer .= $char;
+    }
+
+    $statement = trim($buffer);
+    if ($statement !== '') {
+        $statements[] = $statement;
+    }
+
+    return $statements;
+}
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    try {
+        if (!hash_equals($_SESSION['ict'], $_POST['_csrf'] ?? '')) {
+            throw new RuntimeException('CSRF hatası');
+        }
+
+        $h = trim($_POST['host'] ?? 'localhost');
+        $n = trim($_POST['name'] ?? '');
+        $u = trim($_POST['user'] ?? '');
+        $pw = $_POST['pass'] ?? '';
+        $an = trim($_POST['admin'] ?? '');
+        $em = filter_var($_POST['email'] ?? '', FILTER_VALIDATE_EMAIL);
+        $ap = $_POST['apass'] ?? '';
+
+        if (!$n || !$u || !$an || !$em || strlen($ap) < 10) {
+            throw new RuntimeException('Tüm alanları doldurun; yönetici şifresi en az 10 karakter olmalı.');
+        }
+
+        $db = new PDO(
+            "mysql:host={$h};dbname={$n};charset=utf8mb4",
+            $u,
+            $pw,
+            [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]
+        );
+
+        $sql = file_get_contents(__DIR__ . '/database/schema.sql');
+        if ($sql === false) {
+            throw new RuntimeException('Veritabanı şema dosyası okunamadı.');
+        }
+
+        foreach (splitSqlStatements($sql) as $query) {
+            $db->exec($query);
+        }
+
+        $db->prepare(
+            "INSERT INTO users(name,email,password_hash,role,status,balance,created_at)
+             VALUES(?,?,?,'admin','active',0,NOW())"
+        )->execute([$an, $em, password_hash($ap, PASSWORD_DEFAULT)]);
+
+        $cfg = "<?php\nreturn " . var_export([
+            'db' => [
+                'host' => $h,
+                'name' => $n,
+                'user' => $u,
+                'pass' => $pw,
+            ],
+        ], true) . ";\n";
+
+        if (file_put_contents(__DIR__ . '/config.php', $cfg, LOCK_EX) === false) {
+            throw new RuntimeException('config.php yazılamadı; dosya izinlerini kontrol edin.');
+        }
+
+        @chmod(__DIR__ . '/config.php', 0600);
+        file_put_contents(__DIR__ . '/install.lock', 'ok');
+        header('Location: index.php');
+        exit;
+    } catch (Throwable $e) {
+        $err = $e->getMessage();
+    }
+}
+?>
+<!doctype html>
+<html lang="tr">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>SMM Panel Kurulum</title>
+<link rel="stylesheet" href="assets/app.css">
+<main>
+<section class="card auth">
+<h1>SMM Panel Kurulumu</h1>
+<?php if ($err): ?>
+<p class="error"><?= htmlspecialchars($err, ENT_QUOTES, 'UTF-8') ?></p>
+<?php endif ?>
+<form method="post">
+<input type="hidden" name="_csrf" value="<?= htmlspecialchars($_SESSION['ict'], ENT_QUOTES, 'UTF-8') ?>">
+<label>MySQL sunucusu</label><input name="host" value="localhost" required>
+<label>Veritabanı</label><input name="name" required>
+<label>Veritabanı kullanıcısı</label><input name="user" required>
+<label>Veritabanı şifresi</label><input type="password" name="pass">
+<h2>Yönetici</h2>
+<label>Ad soyad</label><input name="admin" required>
+<label>E-posta</label><input type="email" name="email" required>
+<label>Şifre (10+ karakter)</label><input type="password" name="apass" minlength="10" required>
+<button>Kurulumu tamamla</button>
+</form>
+</section>
+</main>
+</html>
