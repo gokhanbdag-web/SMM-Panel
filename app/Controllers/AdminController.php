@@ -57,6 +57,6 @@ final class AdminController
   $logs=$db->query('SELECT l.*,p.name provider_name FROM provider_logs l LEFT JOIN providers p ON p.id=l.provider_id ORDER BY l.id DESC LIMIT 30')->fetchAll();
   $settings=[];foreach($db->query('SELECT setting_key,setting_value FROM settings')->fetchAll() as $row)$settings[$row['setting_key']]=$row['setting_value'];
   $content=\App\Core\View::render('admin',['topups'=>$topups,'orders'=>$orders,'services'=>$services,'providers'=>$providers,'users'=>$users,'logs'=>$logs,'settings'=>$settings]);
-  $title='Yönetim paneli';$user=Auth::user();$flash=$_SESSION['flash']??'';unset($_SESSION['flash']);$token=$_SESSION['_csrf']??='';require APP.'/Views/layout.php';
+  $title='Yönetim paneli';$user=Auth::user();$flash=$_SESSION['flash']??'';unset($_SESSION['flash']);$token=$_SESSION['_csrf']??=bin2hex(random_bytes(32));require APP.'/Views/layout.php';
  }
 }
