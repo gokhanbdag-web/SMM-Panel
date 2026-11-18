@@ -27,7 +27,7 @@ function splitSqlStatements(string $sql): array
         if ($quote !== null) {
             $buffer .= $char;
 
-            if ($char === '\\\\' && $i + 1 < $length) {
+            if ($char === '\\' && $i + 1 < $length) {
                 $buffer .= $sql[++$i];
                 continue;
             }
